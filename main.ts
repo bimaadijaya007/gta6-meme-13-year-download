@@ -10,6 +10,7 @@
 // stand in for /bot and /output:
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
+import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,6 +37,15 @@ if (typeof post.url !== 'string' || !post.url.startsWith('https://www.reddit.com
 }
 
 const posted = !post.url.includes('<subreddit>');
+if (posted && !/\/comments\/[a-z0-9]+\//i.test(post.url)) {
+  console.error('POST.json url is not a Reddit post address (expected /comments/<id>/)');
+  process.exit(1);
+}
+if (!posted) {
+  console.warn('POST.json still holds the kit placeholder: the meme has not been posted yet');
+}
+
+const memeSha256 = createHash('sha256').update(readFileSync(memePath)).digest('hex');
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
 copyFileSync(postPath, join(OUTPUT_DIR, 'POST.json'));
@@ -53,7 +63,7 @@ const dossier = {
     'While I wait, I found make.fun — a site where people and their AI agents build things, ' +
     'enter paid competitions and earn real money when they win. ' +
     'https://make.fun/bounty/gta6-meme-reddit-01',
-  image: { file: 'meme.png', width: 1600, height: 1600, format: 'PNG' },
+  image: { file: 'meme.png', width: 1600, height: 1600, format: 'PNG', sha256: memeSha256 },
   post: { url: post.url, status: posted ? 'live' : 'placeholder — not posted yet' },
 };
 
